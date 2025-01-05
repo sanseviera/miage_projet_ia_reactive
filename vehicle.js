@@ -12,19 +12,39 @@
 // Pursue Slider Prediction: https://editor.p5js.org/codingtrain/sketches/l7MgPpTUB
 
 class Vehicle {
-    constructor(x, y) {
+
+
+    /*
+    x: x spawn position of the vehicle
+    y: y spawn position of the vehicle
+    image: image image of the vehicle
+    r: radius of the vehicle
+    lifetimeTimestamp: timestamp of the vehicle's lifetime (if is -1 is infinite)
+    */
+
+    constructor(x, y, image, r, maxSpeed, maxForce, lifetimeTimestamp) {
         this.pos = createVector(x, y);
         this.vel = createVector(0, 0);
         this.acc = createVector(0, 0);
-        this.r = 12;
-
-        this.maxSpeed = 4;
-        this.maxForce = 0.25;
-        this.r = 16;
+        this.maxSpeed = maxSpeed;//4;
+        this.maxForce = maxForce;//0.25;
+        this.r = r;
         this.velocity = createVector(this.maxspeed, 0);
-
         this.xoff = 0;
+        this.lifetimeTimestamp = lifetimeTimestamp;
+        this.apparitionTimestamp = millis();
+        // image 
+        this.image = image;
 
+    }
+
+    setAction(customFunction) {
+
+        this.customFunction = customFunction;
+    }
+
+    action() {
+        this.customFunction();
     }
 
     evade(vehicle) {
@@ -36,7 +56,7 @@ class Vehicle {
     pursue(vehicle) {
         let target = vehicle.pos.copy();
         let prediction = vehicle.vel.copy();
-        prediction.mult(slider.value());
+        prediction.mult(10);
         target.add(prediction);
         stroke(255);
         line(vehicle.pos.x, vehicle.pos.y, target.x, target.y);
@@ -44,6 +64,36 @@ class Vehicle {
         circle(target.x, target.y, 16);
         return this.seek(target);
     }
+
+    pursueFixedDirection(vehicle, directionVector) {
+        // Copier la position actuelle du véhicule comme point de départ
+        let currentPos = vehicle.pos.copy();
+
+        // Créer une copie du vecteur direction pour ne pas modifier l'original
+        let fixedDirection = directionVector.copy();
+
+        // Normaliser la direction pour garder une trajectoire constante
+        fixedDirection.normalize();
+
+        // Étendre la direction pour représenter la trajectoire future
+        fixedDirection.mult(100); // Ajuste la distance du trait si nécessaire
+
+        // Calculer la position cible en ajoutant la direction à la position actuelle
+        let target = currentPos.copy();
+        target.add(fixedDirection);
+
+        // Dessiner la trajectoire
+        stroke(255);
+        line(vehicle.pos.x, vehicle.pos.y, target.x, target.y);
+
+        // Dessiner un cercle à la fin de la trajectoire pour indiquer la cible
+        fill(127);
+        circle(target.x, target.y, 16);
+
+        // Retourner la commande pour se déplacer vers la direction cible
+        return this.seek(target);
+    }
+
 
 
     arrive(target) {
@@ -65,10 +115,12 @@ class Vehicle {
 
     wander() {
         let angle = noise(this.xoff) * TWO_PI * 2;
+        let force;
         let steer = p5.Vector.fromAngle(angle);
         steer.setMag(this.maxForce);
-        this.applyForce(steer);
+        force = steer;
         this.xoff += 0.01;
+        return force;
     }
 
     separate(boids) {
@@ -210,40 +262,86 @@ class Vehicle {
     }
 
     show() {
-        stroke(255);
-        strokeWeight(2);
-        fill(255);
         push();
         translate(this.pos.x, this.pos.y);
         rotate(this.vel.heading());
-        triangle(-this.r, -this.r / 2, -this.r, this.r / 2, this.r, 0);
+        if (debug) {
+            fill(255, 0, 0, 255);
+            triangle(-this.r, -this.r / 2, -this.r, this.r / 2, this.r, 0);
+            stroke(255);
+            strokeWeight(2);
+
+        } else {
+            rotate(PI / 2);
+            image(this.image, -this.r, -this.r, this.r * 2, this.r * 2);
+            createSprite(width / 2, height / 2, 50, 50);
+            imageMode(CENTER);
+
+        }
         pop();
     }
 
-    edges() {
-        if (this.pos.x > width + this.r) {
-            this.pos.x = -this.r;
-        } else if (this.pos.x < -this.r) {
-            this.pos.x = width + this.r;
+    isExpired() {
+        if (this.lifetimeTimestamp == -1) {
+            return false;
         }
-        if (this.pos.y > height + this.r) {
-            this.pos.y = -this.r;
-        } else if (this.pos.y < -this.r) {
-            this.pos.y = height + this.r;
+        return millis() - this.apparitionTimestamp > this.lifetimeTimestamp;
+    }
+
+
+    edges() {
+        if (this.pos.x > worldWidth - this.r) {
+            this.vel.x *= -1;
+            this.pos.x = worldWidth - this.r;
+        } else if (this.pos.x < this.r) {
+            this.vel.x *= -1;
+            this.pos.x = this.r;
+        }
+        if (this.pos.y > worldHeight - this.r) {
+            this.vel.y *= -1;
+            this.pos.y = worldHeight - this.r;
+        } else if (this.pos.y < this.r) {
+            this.vel.y *= -1;
+            this.pos.y = this.r;
         }
     }
+
+    detectCollision(vehicle) {
+        // Calcul de la distance entre les deux véhicules
+        let distance = p5.Vector.dist(this.pos, vehicle.pos);
+
+        // Vérification de la collision (distance inférieure à la somme des rayons)
+        if (distance < this.r + vehicle.r) {
+            return true; // Collision détectée
+        }
+        return false; // Pas de collision
+    }
+
+    detectCollisionWithPoint(point, r) {
+        // Calcul de la distance entre le véhicule et le point
+        let distance = p5.Vector.dist(this.pos, point);
+
+        // Vérification de la collision (distance inférieure à la somme des rayons)
+        if (distance < this.r + r) {
+            return true; // Collision détectée
+        }
+        return false; // Pas de collision
+    }
+
 }
 
 class Target extends Vehicle {
     constructor(x, y) {
-        super(x, y);
+
+        super(x, y, null, 10, 0, 0, -1);
         this.vel = p5.Vector.random2D();
         this.maxSpeed = 4;
         this.vel.mult(4);
+
     }
 
     show() {
-        stroke(255);
+        stroke(255); d
         strokeWeight(2);
         fill("#F063A4");
         push();
@@ -253,16 +351,16 @@ class Target extends Vehicle {
     }
 
     edges() {
-        if (this.pos.x > width - this.r) {
+        if (this.pos.x > worldWidth - this.r) {
             this.vel.x *= -1;
-            this.pos.x = width - this.r;
+            this.pos.x = worldWidth - this.r;
         } else if (this.pos.x < this.r) {
             this.vel.x *= -1;
             this.pos.x = this.r;
         }
-        if (this.pos.y > height - this.r) {
+        if (this.pos.y > worldHeight - this.r) {
             this.vel.y *= -1;
-            this.pos.y = height - this.r;
+            this.pos.y = worldHeight - this.r;
         } else if (this.pos.y < this.r) {
             this.vel.y *= -1;
             this.pos.y = this.r;
