@@ -56,10 +56,7 @@ let monster_win = []; // liste des monstres pour l'écran de victoire
 // UI
 let textLifes;
 let textScore;
-let iconButtonFly;
-let iconButtonFuze;
-let iconButtonOvni;
-let iconButtonDollar;
+
 
 // Images
 let backgroundWin;
@@ -119,8 +116,7 @@ function setup() {
     });
     //-----------------canvas-----------------
     createCanvas(windowWidth, windowHeight, WEBGL);
-    // -----------------path-----------------
-    newPath();
+
     cameraPos = createVector(0, 0);
 
 
@@ -164,39 +160,7 @@ function setup() {
 
 
 
-    iconButtonFly = createButton("🪰 10");
-    iconButtonFly.position(10, 110);
-    iconButtonFly.style('z-index', '2');
-    iconButtonFly.mousePressed(() => {
-        //ajouter des véhicules
-        levelManager.getCurrentLevel().enemies = levelManager.getCurrentLevel().enemies.concat(VehiculeFactory.createFly(random(width), random(height)));
 
-    });
-
-    iconButtonFuze = createButton("🚀 10");
-    iconButtonFuze.position(60, 110);
-    iconButtonFuze.style('z-index', '2');
-    iconButtonFuze.mousePressed(() => {
-
-
-    });
-
-    iconButtonOvni = createButton("🛸 20");
-    iconButtonOvni.position(110, 110);
-    iconButtonOvni.style('z-index', '2');
-    iconButtonOvni.mousePressed(() => {
-        levelManager.getCurrentLevel().enemies.push(
-            VehiculeFactory.createFly(random(width), random(height))
-        );
-    });
-
-    iconButtonBees = createButton("🐝 20")
-    iconButtonBees.position(160, 110);
-    iconButtonBees.style('z-index', '2');
-    iconButtonBees.mousePressed(() => {
-        levelManager.getCurrentLevel().enemies = levelManager.getCurrentLevel().enemies.concat(VehiculeFactory.createBeeGroup(random(width), random(height)));
-    }
-    );
 
     // debug bouton
     buttonDebug = createButton("Debug");
@@ -253,7 +217,6 @@ function setup() {
 
 
 
-    materialUX.push(iconButtonFly, iconButtonFuze, iconButtonOvni, bouton_game_over);
 
 
     //-----------------path-----------------
@@ -303,22 +266,6 @@ function updateCamera() {
 
 
 
-async function newPath() {
-    /*
-        Crée un nouveau chemin pour les véhicules
-    */
-    path = new Path();
-    let offset = 30; // Décalage pour les bords
-    path.addPoint(100, 100);
-    path.addPoint(100, height - offset);
-    path.addPoint(width - offset, height - offset);
-    path.addPoint(width - offset, 100);
-
-    path.display();
-    //masquer le chemin
-    path.hide();
-
-}
 
 async function mousePressed() {
     //if (vehicle.contains(mouseX, mouseY)) {
